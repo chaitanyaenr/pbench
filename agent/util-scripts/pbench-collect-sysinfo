@@ -137,3 +137,4 @@ pbench-metadata-log --group=$group --dir=$dir $name
 status=$?
 
 exit $status
+
