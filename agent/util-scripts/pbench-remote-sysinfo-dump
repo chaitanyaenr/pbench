@@ -28,7 +28,6 @@ fi
 
 cd $sysinfo_path >&2
 echo "pbench-sysinfo-dump data size: $(du -sm $sysinfo_path | awk '{print $1}') MB" >&2
-tar cf - *
 exit_status=$?
 rm -rf $sysinfo_path >&2
 exit $exit_status
