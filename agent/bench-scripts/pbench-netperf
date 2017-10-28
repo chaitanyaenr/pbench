@@ -75,7 +75,7 @@ start_iteration_num=1
 keep_failed_tool_data="y"
 orig_cmd="$*"
 tool_group=default
-
+sysinfo="default"
 
 function gen_cmd {
 
@@ -141,7 +141,7 @@ function print_header {
 }
 
 # Process options and arguments
-opts=$(getopt -q -o i:c:t:r:m:p:M:S:C: --longoptions "client-label:,server-label:,install,start-iteration-num:,config:,instances:,test-types:,runtime:,message-sizes:,protocols:,samples:,client:,clients:,servers:,server:,max-stddev:,max-failures:,kvm-host:,log-response-times:,postprocess-only:,run-dir:,tool-group:" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o i:c:t:r:m:p:M:S:C: --longoptions "client-label:,server-label:,install,start-iteration-num:,config:,instances:,test-types:,runtime:,message-sizes:,protocols:,samples:,client:,clients:,servers:,server:,max-stddev:,max-failures:,kvm-host:,log-response-times:,postprocess-only:,run-dir:,tool-group:,sysinfo:" -n "getopt.sh" -- "$@");
 if [ $? -ne 0 ]; then
 	printf -- "$*\n"
 	printf "\n"
@@ -324,6 +324,13 @@ while true; do
 			shift;
 		fi
 		;;
+		--sysinfo)
+		shift;
+		if [ -n "$1" ]; then
+			sysinfo="$1"
+			shift;
+		fi
+		;;
 		*)
 		debug_log "[$script_name]what happened? [$1]"
 		break;
@@ -335,7 +342,13 @@ while true; do
 	esac
 done
 verify_tool_group $tool_group
-
+pbench-collect-sysinfo --sysinfo=$sysinfo --check
+if [ $? != 0 ]; then
+        printf -- "$*\n\n"
+        printf "\t${benchmark}: you specified an invalid --sysinfo option (\"$sysinfo\")\n\n"
+        usage
+        exit 1
+fi
 if [[ -z "$benchmark_run_dir" ]]; then
         # We don't have an explicit run directory, construct one
         benchmark_fullname="${benchmark}_${config}_${date_suffix}"
@@ -418,7 +431,7 @@ count=1
 # disable firewall on local system
 systemctl stop firewalld
 export benchmark config
-pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir beg
+pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir --sysinfo=$sysinfo beg
 pbench-metadata-log --group=$tool_group --dir=$benchmark_run_dir beg
 # start the server processes
 for protocol in `echo $protocols | sed -e s/,/" "/g`; do
@@ -603,7 +616,7 @@ for protocol in `echo $protocols | sed -e s/,/" "/g`; do
 done
 printf -- "</pre>\n" >>$benchmark_summary_html_file
 pbench-metadata-log --group=$tool_group --dir=$benchmark_run_dir end
-pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir end
+pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir --sysinfo=$sysinfo end
 
 
 rmdir $benchmark_run_dir/.running

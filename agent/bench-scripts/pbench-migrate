@@ -53,9 +53,10 @@ seconds_before_postprocess=1
 use_libvirt="y"
 tool_group=default
 config=""
+sysinfo="default"
 
 # Process options and arguments
-opts=$(getopt -q -o C:c:r:d: --longoptions "max-downtime:,compcache_size:,speed:,seconds-before-postprocess:,seconds-before-migrate:,postprocess:,round-trips:,vm:,dir:,config:,src-host:,src-ipaddr:,dest-host:,dest-ipaddr:,timeout:,use-libvirt:,tool-group:" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o C:c:r:d: --longoptions "max-downtime:,compcache_size:,speed:,seconds-before-postprocess:,seconds-before-migrate:,postprocess:,round-trips:,vm:,dir:,config:,src-host:,src-ipaddr:,dest-host:,dest-ipaddr:,timeout:,use-libvirt:,tool-group:,sysinfo:" -n "getopt.sh" -- "$@");
 
 if [ $? -ne 0 ]; then
 	printf -- "$*\n"
@@ -79,6 +80,8 @@ if [ $? -ne 0 ]; then
 	printf -- "\t\t--use-libvirt=y/n                       iif this is "n", then migration is done with qemu directly\n"
 	printf -- "\t\t                                        0 = 1 migration, just to dest-host (no round-trip migration, VM ends up on dest-host).\n"
 	printf -- "\t\t                                        1 = 2 migrations, 2 = 4 migrations, etc.  VM ends up on src-host\n"
+	printf -- "\t\t--sysinfo=str,                          str= comma seperated values of sysinfo to be collected\n"
+        printf -- "\t\t                                             available: $(pbench-collect-sysinfo --options)\n"
 	exit 1
 fi
 eval set -- "$opts";
@@ -125,6 +128,13 @@ while true; do
 		shift;
 		if [ -n "$1" ]; then
 			seconds_before_migrate="$1"
+			shift;
+		fi
+		;;
+		--sysinfo)
+		shift;
+		if [ -n "$1" ]; then
+			sysinfo="$1"
 			shift;
 		fi
 		;;
@@ -209,6 +219,14 @@ while true; do
 	esac
 done
 verify_tool_group $tool_group
+
+pbench-collect-sysinfo --sysinfo=$sysinfo --check
+if [ $? != 0 ]; then
+        printf -- "$*\n\n"
+        printf "\t${benchmark}: you specified an invalid --sysinfo option (\"$sysinfo\")\n\n"
+        usage
+        exit 1
+fi
 
 function do_migrate() {
 
@@ -330,7 +348,7 @@ if [ $loops -eq 0 ]; then
 fi
 count=1
 export benchmark config
-pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir beg
+pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir --sysinfo=$sysinfo beg
 pbench-metadata-log --group=$tool_group --dir=$benchmark_run_dir beg
 for i in `seq 1 $loops`; do
 	iteration="$count-from-$src_host-to-$dest_host"
@@ -374,6 +392,6 @@ for postprocess_dir in $postprocess_dirs; do
 done
 wait
 pbench-metadata-log --group=$tool_group --dir=$benchmark_run_dir end
-pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir end
+pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir --sysinfo=$sysinfo end
 
 rmdir $benchmark_run_dir/.running

@@ -54,6 +54,7 @@ tool_group=default
 tool_label_pattern="dbench-"
 thread_counts=`cat /proc/cpuinfo | grep processor | wc -l`
 client_nodes=""
+sysinfo="default"
 
 function install_dbench {
 	if check_install_rpm $benchmark_rpm $ver; then
@@ -90,7 +91,7 @@ function print_header {
 
 
 # Process options and arguments
-opts=$(getopt -q -o i:c:t:r:m:p:M:S:C: --longoptions "client-node:,client-nodes:,client-label:,tool-label-pattern:,install,start-iteration-num:,config:,threads:,runtime:,samples:,client:,clients:,max-stddev:,max-failures:,postprocess-only:,run-dir:,tool-group:" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o i:c:t:r:m:p:M:S:C: --longoptions "client-node:,client-nodes:,client-label:,tool-label-pattern:,install,start-iteration-num:,config:,threads:,runtime:,samples:,client:,clients:,max-stddev:,max-failures:,postprocess-only:,run-dir:,tool-group:,sysinfo:" -n "getopt.sh" -- "$@");
 if [ $? -ne 0 ]; then
 	printf -- "$*\n"
 	printf "\n"
@@ -126,6 +127,8 @@ if [ $? -ne 0 ]; then
 	printf    "\t\t                                        prefix.  if you don't want to register your tools with \"dbench-\" as\n"
 	printf    "\t\t                                        part of the label, just use --tool-label-pattern= to tell this script\n"
 	printf    "\t\t                                        the prefix pattern to use for CPU information.\n"
+	printf -- "\t\t             --sysinfo=str,             str= comma seperated values of sysinfo to be collected\n"
+	printf -- "\t\t                                             available: $(pbench-collect-sysinfo --options)\n"
 	exit 1
 fi
 eval set -- "$opts";
@@ -228,6 +231,13 @@ while true; do
 			shift;
 		fi
 		;;
+		--sysinfo)
+		shift;
+		if [ -n "$1" ]; then
+			sysinfo="$1"
+			shift;
+		fi
+		;;
 		*)
 		debug_log "[$script_name]what happened? [$1]"
 		break;
@@ -238,6 +248,13 @@ while true; do
 		;;
 	esac
 done
+pbench-collect-sysinfo --sysinfo=$sysinfo --check
+if [ $? != 0 ]; then
+        printf -- "$*\n\n"
+        printf "\t${benchmark}: you specified an invalid --sysinfo option (\"$sysinfo\")\n\n"
+        usage
+        exit 1
+fi
 if [[ -z "$benchmark_run_dir" ]]; then
 	# We don't have an explicit run directory, construct one
 	benchmark_fullname="${benchmark}_${config}_${date_suffix}"
@@ -300,7 +317,7 @@ let total_iterations=count
 count=1
 max_key_length=0
 export benchmark config
-pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir beg
+pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir --sysinfo=$sysinfo beg
 pbench-metadata-log --group=$tool_group --dir=$benchmark_run_dir beg
 
 for thread_count in `echo $thread_counts | sed -e s/,/" "/g`; do
@@ -513,6 +530,6 @@ done
 
 printf -- "</pre>\n" >>$benchmark_summary_html_file
 pbench-metadata-log --group=$tool_group --dir=$benchmark_run_dir end
-pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir end
+pbench-collect-sysinfo --group=$tool_group --dir=$benchmark_run_dir --sysinfo=$sysinfo end
 
 rmdir $benchmark_run_dir/.running
