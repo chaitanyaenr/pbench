@@ -5,25 +5,38 @@ import sys, json, warnings, logging, math
 input_file = sys.argv[1]
 output_file = sys.argv[2]
 metrics = []
+max_value = 9223372036854775807
 
 # convert strings to float for elasticsearch visualization
 def convert(metrics_data):
     if type(metrics_data)==type({}):
         for key in metrics_data:
             try:
-                metrics_data[key] = int(metrics_data[key])
+		if int(metrics_data[key]) > max_value:
+		    pass
+		else:
+                    metrics_data[key] = int(metrics_data[key])
             except:
                 try:
-                   metrics_data[key] = float(metrics_data[key])
+		   if float(metrics_data[key]) > max_value:
+		       pass
+		   else:
+                       metrics_data[key] = float(metrics_data[key])
                 except:
                    convert(metrics_data[key])
 
 def convert_value(val):
     try:
-        val = int(val)
+	if int(val) > max_value:
+	    pass
+	else:
+            val = int(val)
     except:
         try:
-            val = float(val)
+	    if float(val) > max_value:
+	        pass
+	    else:
+                val = float(val)
         except:
             val = val
     return val

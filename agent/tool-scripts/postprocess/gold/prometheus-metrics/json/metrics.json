@@ -26527,7 +26527,7 @@
         "@timestamp":1491850959,
         "metric":"go_memstats_last_gc_time_seconds",
         "type":"GAUGE",
-        "value":1.4918508911861354e+19
+        "value":"1.4918508911861354e+19"
     },
     {
         "@timestamp":1491850959,
@@ -54553,7 +54553,7 @@
         "@timestamp":1491850969,
         "metric":"go_memstats_last_gc_time_seconds",
         "type":"GAUGE",
-        "value":1.4918508911861354e+19
+        "value":"1.4918508911861354e+19"
     },
     {
         "@timestamp":1491850969,
