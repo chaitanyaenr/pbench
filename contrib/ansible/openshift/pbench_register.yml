@@ -17,13 +17,17 @@
     - name: clear file contents
       file: path={{ file }} state=absent
 
-    - name: copy, set permissions on the register script
-      copy:
-        src: register.sh
-        dest: /run/pbench/register.sh
-        owner: root
-        group: root
-        mode: 0755
+    - name: copy script
+      shell: cp -r --preserve=context /root/pbench/contrib/ansible/openshift/register.sh /run/pbench/register.sh
+    - name: set perms
+      shell: chmod +x /run/pbench/register.sh
+      #    - name: copy, set permissions on the register script
+      #copy:
+      #  src: register.sh
+      #  dest: /run/pbench/register.sh
+      #  owner: root
+      #  group: root
+      #  mode: 0755
 
     - name: add masters to the file
       shell: echo -e {{ item.1 }} master {{ item.0 }} >> {{ file }}
@@ -75,13 +79,14 @@
       with_indexed_items: "{{ groups['lb'] }}"
       when: groups['lb']|default([])
 
-    - name: copy inventory file to pbench-controller
-      copy:
-        src: "{{inventory_file}}"
-        dest: "{{ inventory_file_path }}"
+      #- name: copy inventory file to pbench-controller
+      #shell: cp "{{ inventory_file }}" "{{ inventory_file_path }}"
+      #copy:
+      #  src: "{{inventory_file}}"
+      #  dest: "{{ inventory_file_path }}"
 
     - name: copy inventory file to master
-      shell: scp {{ inventory_file_path }} {{ item }}:{{ inventory_file_path }}
+      shell: scp -P {{ ansible_port }} {{ inventory_file }} {{ item }}:{{ inventory_file_path }}
       with_items:
         - "{{ groups['masters'] }}"
 
@@ -96,6 +101,7 @@
       file: path={{ ansible_env.HOME }}/.kube state=directory
     
     - name: get kube config from openshift master
-      shell: scp {{ item }}:{{ ansible_env.HOME }}/.kube/config {{ ansible_env.HOME }}/.kube/
+      shell: scp -P {{ ansible_port }} {{ item }}:{{ ansible_env.HOME }}/.kube/config {{ ansible_env.HOME }}/.kube/
       with_items:
         - "{{ groups['masters'][0] }}"
+      ignore_errors: yes
